@@ -136,12 +136,14 @@ tconcat-correct TNil = λ p' s → refl
 tconcat-correct (TCons y y') = λ p' s → tconcat-correct y' p' (tinstrDenote y s)
 -- case split, then auto
 
+open import Relation.Binary.PropositionalEquality using (cong₂)
+
 tcompile-correct' : ∀ {t} → (e : texp t) → ∀ ts → (s : vstack ts) → tprogDenote (tcompile e ts) s ≡ texpDenote e , s
 tcompile-correct' (TNConst n) ts s = refl
 tcompile-correct' (TBConst b) ts s = refl
-tcompile-correct' (TBinop {t2 = t2} b e1 e2) ts s rewrite (tconcat-correct (tcompile e2 ts) (tconcat (tcompile e1 (t2 ∷ ts)) (TCons (TiBinop ts b) TNil)) s) | (tconcat-correct (tcompile e1 (t2 ∷ ts)) (TCons (TiBinop ts b) TNil) (tprogDenote (tcompile e2 ts) s))  = {!!}
--- this is going to be a nightmare...
--- need new tricks
+tcompile-correct' (TBinop {t2 = t2} b e1 e2) ts s rewrite (tconcat-correct (tcompile e2 ts) (tconcat (tcompile e1 (t2 ∷ ts)) (TCons (TiBinop ts b) TNil)) s) | (tconcat-correct (tcompile e1 (t2 ∷ ts)) (TCons (TiBinop ts b) TNil) (tprogDenote (tcompile e2 ts) s)) | (tcompile-correct' e1 (t2 ∷ ts) (tprogDenote (tcompile e2 ts) s)) | (tcompile-correct' e2 ts s) = cong₂ _,_ refl refl
+-- this is a nightmare...
+-- need generalized rewriting
 
 tcompile-correct : ∀ t → (e : texp t) → tprogDenote (tcompile e []) tt ≡ texpDenote e , tt
-tcompile-correct = {!!}
+tcompile-correct t e = tcompile-correct' e [] tt
