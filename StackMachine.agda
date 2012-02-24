@@ -4,7 +4,7 @@ open import Data.Nat using (ℕ;_+_;_*_)
 open import Data.List using (List;_∷_;[];_++_;monoid)
 open import Data.Maybe using (Maybe;just;nothing)
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;trans;subst)
-open import Algebra using (Monoid)
+open import Algebra using (Monoid;module Monoid)
 open import Data.Product using (proj₂)
 
 data binop : Set where
@@ -45,17 +45,21 @@ compile : (e : exp) → prog
 compile (Const n) = (iConst n) ∷ []
 compile (Binop b e1 e2) = compile e2 ++ compile e1 ++ iBinop b ∷ []
 
-app-assoc-reverse = Monoid.assoc (monoid instr)
+module I {A : Set} = Monoid (monoid A)
+
 app-nil-end = proj₂ (Monoid.identity (monoid instr))
 -- why have to specify instr?
 
 compile-correct' : ∀ e p s → progDenote (compile e ++ p) s ≡ progDenote p (expDenote e ∷ s)
 compile-correct' (Const n) p s = refl -- everything after intros done automatically
-compile-correct' (Binop b e1 e2) p s rewrite (app-assoc-reverse (compile e2) (compile e1 ++ iBinop b ∷ []) p) | (app-assoc-reverse (compile e1) (iBinop b ∷ []) p) = trans (compile-correct' e2 (compile e1 ++ iBinop b ∷ p) s) (compile-correct' e1 (iBinop b ∷ p) (expDenote e2 ∷ s))
+compile-correct' (Binop b e1 e2) p s = {!!}
+-- compile-correct' (Binop b e1 e2) p s rewrite (I.assoc (compile e2) (compile e1 ++ iBinop b ∷ []) p) | (I.assoc (compile e1) (iBinop b ∷ []) p) = trans (compile-correct' e2 (compile e1 ++ iBinop b ∷ p) s) (compile-correct' e1 (iBinop b ∷ p) (expDenote e2 ∷ s))
 -- why have to specify the instance of the rewrite? that's awful
 -- is it possible to get the effects of rewriting as a proof term rather than using with (rewrite)?
 -- what about rewriting possibilities via quoteGoal...?
 -- note: most of actual proof was filled in by C-c C-a
+-- alternatively: use equational rewriting thing in standard library
+-- dan rosén's automatic theorem prover for agda proof of concept
 
 compile-correct : ∀ e → progDenote (compile e) [] ≡ just (expDenote e ∷ [])
 compile-correct e = subst (λ x → progDenote x [] ≡ progDenote [] (expDenote e ∷ [])) (app-nil-end (compile e)) (compile-correct' e [] [])
